@@ -1,3 +1,6 @@
 [submodule "trk-rails-forms-nested-habtm-for-associations"]
 	path = trk-rails-forms-nested-habtm-for-associations
 	url = git@github.com:duleorlovic/trk-rails-forms-nested-habtm-for-associations.git
+[submodule "trk-rails-forms-hotwire-screencast-room-messages-scaffold"]
+	path = trk-rails-forms-hotwire-screencast-room-messages-scaffold
+	url = git@github.com:duleorlovic/trk-rails-forms-hotwire-screencast-room-messages-scaffold.git
