@@ -4,3 +4,6 @@
 [submodule "trk-rails-forms-hotwire-screencast-room-messages-scaffold"]
 	path = trk-rails-forms-hotwire-screencast-room-messages-scaffold
 	url = git@github.com:duleorlovic/trk-rails-forms-hotwire-screencast-room-messages-scaffold.git
+[submodule "trk-rails-forms-hotwire-todo-app-bootstrap-modal"]
+	path = trk-rails-forms-hotwire-todo-app-bootstrap-modal
+	url = git@github.com:duleorlovic/trk-rails-forms-hotwire-todo-app-bootstrap-modal.git

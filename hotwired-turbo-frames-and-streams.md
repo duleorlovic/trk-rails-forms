@@ -2,18 +2,8 @@
 
 * https://github.com/duleorlovic/trk-rails-forms-hotwire-screencast-room-messages-scaffold
   sample app from Hotwired screencast https://hotwired.dev/#screencast
-* spa todo app with bootstrap modals and inline editing
-
-To create this example I used
-
-```
-rails new trk-rails-forms-hotwire-screencast-room-messages-scaffold --database=postgresql
-```
-
-Template to install this example to your application
-```
-rails app:template LOCATION="`pwd`_template.rb"
-```
+* https://github.com/duleorlovic/trk-rails-forms-hotwire-todo-app-bootstrap-modal
+  spa todo app with bootstrap modals and inline editing
 
 # Install hotwire
 
@@ -37,14 +27,11 @@ rails turbo:install:webpacker
 import '@hotwired/turbo-rails'
 ```
 
-When we include Turbo in javascipt there is an issue with double click, double
-request it seems that turbo frames does not work (it triggers only once) second
-click on edit does nothing
-One way to solve is to add response in controller
+When we include twice `javascript_pack_tag 'application',
+'data-turbolinks-track': 'reload'` than we got error
 ```
-  format.turbo_stream { render turbo_stream: turbo_stream.replace("#{_params_step}-edit", template: "profile/#{_params_step}") }
+Uncaught DOMException: CustomElementRegistry.define: 'turbo-frame' has already been defined as a custom element
 ```
-https://github.com/hotwired/turbo-rails/issues/180
 
 # Turbo Drive
 
@@ -64,13 +51,18 @@ of navigation:
   cached version (without attached event listeners since it was copied with
   `cloneNode(true)`).
 
-In Rails console click GET requests are HTML and form PATCH/POST and GET after
-redirection are TURBO_STREAM requests for ALL links and forms on the page.
+In Rails log click GET requests are HTML and form PATCH/POST and GET after
+redirection response are TURBO_STREAM requests for ALL links and forms on the
+page.
 
 You can cancel application visit by listening on `turbo:before-visit` event.
 
 Disable Turbo Drive on specific links or forms using `data-turbo='false'` on any
-parent element.
+parent element, for example on form
+https://turbo.hotwire.dev/handbook/drive#disabling-turbo-drive-on-specific-links-or-forms
+```
+<%= form_with model: @member_profile, url: profile_update_path, method: :patch, html: { 'data-turbo': false } do |f| %>
+```
 
 Progress bar is added automatically for request longer than 500ms
 
@@ -133,9 +125,40 @@ which is used to update with matching frame id in response
 </body>
 ```
 
-If you need a link to reload whole page you can add `data-turbo-frame': '_top'`
-(similar as with iframes). You add that to attribute to specific links/forms or
-to whole frame.
+When you need navigate out of the frame, for example full page than you can use
+```
+<turbo-frame id='set_aside_tray' target='_top'>
+</turbo-frame>
+```
+Sometimes you want only particular links or forms to operate out of frame, in
+that case use `'data-turbo-frame': '_top'` attribute. Also for link or form which
+is outside of any frame, you can target it to specific frame by using
+`'data-turbo-frame': 'modal'`.
+You can target another frame:
+```
+<%= turbo_frame_tag 'new', target: 'modal' do %>
+  <%= link_to 'New', new_todo_path %>
+<% end %>
+```
+In this case, response should contain `<turbo-frame id='modal'>`
+Note that double click does not work when it is the same url and response is 200
+stateless GET.
+It works fine if we have POST request for that target frame after click, than
+clicking again will work normally, or if we have two different url (inside same
+target frame) so we can click first, and than second, and again fist (click
+twice on any link, second click will be ignored).
+Only solution that I found is to redirect on server side.
+https://github.com/hotwired/turbo/issues/249#issuecomment-881676935
+
+Also when we include Turbo in javascript there is an issue with double
+click/submit pair, it seems that turbo frames does not work (it triggers only
+once for first click/submit) second pair click on edit does nothing.
+One way to solve is to add response in controller
+```
+  format.turbo_stream { render turbo_stream: turbo_stream.replace("#{_params_step}-edit", template: "profile/#{_params_step}") }
+```
+https://github.com/hotwired/turbo-rails/issues/180
+
 
 Turbo frame can be laizy (lazily) load with `src: template_path` attribute
 Note that usually target attribute on turbo_frame_tag in response does
@@ -152,9 +175,9 @@ example it is a class attribute)
 https://turbo.hotwired.dev/handbook/streams
 
 Turbo Streams is used to deliver live page changes. Basic actions: append
-(added inside element at the end),
-prepend, replace (outer html) update (inner content), remove, before (template
-is added before element), after (inserted after element).
+(added inside element at the end), prepend, replace (outer html) update (inner
+content), remove, before (template is added before element), after (inserted
+after element).
 Example
 ```
 <turbo-stream action="replace" target="message_1">
@@ -225,3 +248,50 @@ class Message < ApplicationRecord
   broadcasts_to :room
 end
 ```
+
+# Bootstrap modal
+
+On index page, you can use one modal holder for all items or one modal for each
+item.
+If you choose to have separate modal for each item than you can set target on
+frame element (from item to modal and from modal to item)
+```
+# app/views/todos/index.html.erb
+<%= turbo_frame_tag "modal-#{todo.id}", target: "todo-frame-#{todo.id}" %>
+<%= render todo %>
+
+# app/views/todos/_todo.html.erb
+<%= turbo_frame_tag "todo-frame-#{todo.id}", target: "modal-#{todo.id}" do %>
+```
+But simpler is to use one modal for all and differentiate items on a form using
+a `data-turbo-frame` (also removing modals is faster since we have only one)
+```
+# app/views/todos/index.html.erb
+<%= turbo_frame_tag 'modal %>
+<%= render todo %>
+
+# app/views/todos/_todo.html.erb
+<%= turbo_frame_tag "todo-frame-#{todo.id}", target: 'modal' do %>
+  <%= form_with model: @todo, html: { 'data-turbo-frame': "todo-frame-#{@todo.id}" } do |form| %>
+```
+
+Since we are using GET to fetch modal, turbo frame needs some redirection, so
+you need to apply redirection patch
+https://github.com/hotwired/turbo/issues/249#issuecomment-881676935
+
+Edit/update is using frames, but for create and destroy we need to use
+turbo_stream append and remove.
+
+To open a modal we use stimulus connect callback.
+There is an issue using back button since modal remains on the page (and it is
+cached) and turbo-frame also get `src` attribute that loads the modal, we need
+to close clear that before cache:
+```
+# app/javascript/controllers/start-modal-on-connect_controller.js
+
+```
+
+Example apps
+https://discuss.hotwired.dev/t/a-to-do-list-application-created-with-hotwire/1827
+
+https://www.reddit.com/r/rubyonrails/comments/kn36rm/i_created_a_beginner_friendly_hotwire_tutorial/
