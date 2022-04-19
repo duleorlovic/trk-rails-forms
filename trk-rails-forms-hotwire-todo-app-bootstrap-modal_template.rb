@@ -1,8 +1,8 @@
 # this includes stimulus-rails and turbo-rails gems
 gem 'hotwire-rails'
 
-rails_command 'hotwire:install'
 # this will run stimulus:install and turbo:install https://github.com/hotwired/hotwire-rails/blob/28d25901c0b0b4492e473478e7e10ca9fc94213e/lib/tasks/hotwire_tasks.rake#L3
+rails_command 'hotwire:install'
 
 environment <<~CODE
   config.generators do |generate|

@@ -1,38 +1,3 @@
-# Example apps
-
-* https://github.com/duleorlovic/trk-rails-forms-hotwire-screencast-room-messages-scaffold
-  sample app from Hotwired screencast https://hotwired.dev/#screencast
-* https://github.com/duleorlovic/trk-rails-forms-hotwire-todo-app-bootstrap-modal
-  spa todo app with bootstrap modals and inline editing
-
-# Install hotwire
-
-```
-gem 'hotwire-rails'
-# this includes stimulus-rails and turbo-rails gems
-
-rails hotwire:install
-# this will install stimulus and turbo https://github.com/hotwired/hotwire-rails/blob/28d25901c0b0b4492e473478e7e10ca9fc94213e/lib/tasks/hotwire_tasks.rake#L3
-# there are two ways, using asset pipeline and webpacker
-# Turbolinks is removed from Gemfile and from packs/application.js
-
-rails turbo:install:asset_pipeline
-# added to app/views/layouts/application.html.erb
-# <%= turbo_inlude_tags %> this is old
-<%= yield :head %>
-<%= javascript_include_tag "turbo", type: "module" %>
-
-rails turbo:install:webpacker
-# Please check if this are added to app/javascript/packs/application.js
-import '@hotwired/turbo-rails'
-```
-
-When we include twice `javascript_pack_tag 'application',
-'data-turbolinks-track': 'reload'` than we got error
-```
-Uncaught DOMException: CustomElementRegistry.define: 'turbo-frame' has already been defined as a custom element
-```
-
 # Turbo Drive
 
 https://turbo.hotwired.dev/handbook/drive
@@ -88,11 +53,12 @@ turbo
 </head>
 ```
 
-After a POST form submittion, server should return 303 redirect response which
-Turbo will follow and render its content. It can not render 200 response after
-POST request because browsers have built-in behavior 'Are you sure you want to
-submit this form again'. 4xx and 5xx are rendered so we can show validation
-errors.
+After a POST form submittion, server should return 30x redirect response which
+Turbo will follow and render its content. But if there is a second redirect,
+turbo will not follow it.
+It can not render 200 response after POST request because browsers have built-in
+behavior 'Are you sure you want to submit this form again'.
+4xx and 5xx are rendered so we can show validation errors.
 
 # Turbo Frames
 
@@ -235,7 +201,7 @@ https://github.com/hotwired/turbo-rails/blob/main/app/models/concerns/turbo/broa
 First parameter is stream name (by default is currrent instance id, but in this
 case it is `room.id`)
 
-By default target is `model_name.plural` (in this case `messages`)
+By default `target: model_name.plural` (in this case `messages`)
 https://github.com/hotwired/turbo-rails/blob/main/app/models/concerns/turbo/broadcastable.rb#L68
 By default it uses defalt partial (in this case
 `app/views/messages/_message.html.erb`)
@@ -249,7 +215,10 @@ class Message < ApplicationRecord
 end
 ```
 
-# Bootstrap modal
+# Bootstrap modal todo app
+
+*With forms you can update, and with streams you can create and delete while you
+stay on the same page*
 
 On index page, you can use one modal holder for all items or one modal for each
 item.
@@ -272,6 +241,10 @@ a `data-turbo-frame` (also removing modals is faster since we have only one)
 
 # app/views/todos/_todo.html.erb
 <%= turbo_frame_tag "todo-frame-#{todo.id}", target: 'modal' do %>
+  <%= link_to 'Edit', edit_todo_path(todo), class: 'btn btn-primary' %>
+
+# app/views/todos/edit.html.erb
+<%= turbo_frame_tag 'modal' do %>
   <%= form_with model: @todo, html: { 'data-turbo-frame': "todo-frame-#{@todo.id}" } do |form| %>
 ```
 
@@ -289,9 +262,73 @@ to close clear that before cache:
 ```
 # app/javascript/controllers/start-modal-on-connect_controller.js
 
+document.addEventListener("turbo:before-cache", function() {
+  // remove modal since it will be opened automatically on connect
+  // we need to do that by removing parent turbo-frame id='modal' which has src
+  let modals = document.querySelectorAll('[data-controller="start-modal-on-connect"]')
+  modals.forEach(function(modal) {
+    let parentTurboFrame = modal.closest('turbo-frame')
+    if (parentTurboFrame) {
+      parentTurboFrame.innerHTML = ''
+      parentTurboFrame.src = null
+    } else {
+      modal.remove()
+    }
+  })
+})
+
+export default class extends Controller {
+  connect() {
+    console.log('start-modal-on-connect#connect')
+    let modal = new Modal(this.element)
+    modal.show()
+    // $(this.element).modal() // BS 4
+  }
+
+  close() {
+    console.log('start-modal-on-connect#close')
+    let modal = Modal.getInstance(this.element)
+    modal.hide()
+    // $(this.element).modal('hide') // BS 4
+  }
+
+  disconnect() {
+    console.log('start-modal-on-connect#disconnect')
+    // at this stage page it is already cached and it is about to be replaced
+  }
+}
 ```
 
-Example apps
+# Signup wizard conditionally redirect
+
+*Using stimulus you can update url while staying on the same page*
+
+
+# Programatically submit turbo frame
+
+I tried those commands https://discuss.hotwired.dev/t/triggering-turbo-frame-with-js/1622/12
+```
+// navigator.submitForm(form)
+// Rails.fire(form, 'submit')
+// this.formTarget.dispatchEvent(new CustomEvent('submit', { bubbles: true }))
+```
+but that does not work. The only solution is to hide submit button and click on
+it
+```
+<%= f.submit 'OK', class: 'hide', 'data-message-chat-target': 'button' %>
+
+static targets = [ 'button' ]
+this.buttonTarget.click()
+```
+
+# Example apps
+
+* https://github.com/duleorlovic/trk-rails-forms-hotwire-screencast-room-messages-scaffold
+  sample app from Hotwired screencast https://hotwired.dev/#screencast
+* https://github.com/duleorlovic/trk-rails-forms-hotwire-todo-app-bootstrap-modal
+  spa todo app with bootstrap modals
+
 https://discuss.hotwired.dev/t/a-to-do-list-application-created-with-hotwire/1827
 
 https://www.reddit.com/r/rubyonrails/comments/kn36rm/i_created_a_beginner_friendly_hotwire_tutorial/
+https://www.youtube.com/watch?v=QzMNO5DjOPQ

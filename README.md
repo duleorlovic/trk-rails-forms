@@ -8,6 +8,11 @@ Exaples includes basic html forms, nested attributes, Hotwire...
 1. Hotwire turbo frames and modal
 1. Hotwire Todo app
 
+Run project on:
+
+https://www.koyeb.com/pricing
+https://labs.play-with-docker.com/
+
 
 # Development
 
@@ -15,6 +20,9 @@ To add new project use
 
 ```
 rails new trk-rails-forms-new-example --database=postgresql
+# or use template in this step if you have a template
+rails new trk-rails-forms-new-example -d postgresql -m template.rb
+
 cd trk-rails-forms-new-example
 git add .
 git commit -am'rails new trk-rails-forms-new-example --database=postgresql'
@@ -38,3 +46,12 @@ If you do not like long bash prompt you can change with this command
 ```
 PS1="$ "
 ```
+
+# TODOS
+
+* image upload with dropzone
+* multiple image upload with dropzone
+* crop file
+
+Read https://sourcediving.com/custom-form-handling-with-turbo-29e5525ff4c3
+https://www.driftingruby.com/episodes/hotwire-modals
